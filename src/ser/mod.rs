@@ -1,9 +1,12 @@
 use crate::error::{Error, Result};
 use crate::ser::flavors::{Cobs, Flavor, Slice};
+use crate::ser::nibble_flavors::{NibbleFlavor, NibbleSlice};
 use serde::Serialize;
 
 #[cfg(feature = "heapless")]
 use crate::ser::flavors::HVec;
+#[cfg(feature = "heapless")]
+use crate::ser::nibble_flavors::NibbleHVec;
 
 #[cfg(feature = "heapless")]
 use heapless::Vec;
@@ -14,10 +17,14 @@ use crate::ser::flavors::AllocVec;
 #[cfg(feature = "alloc")]
 extern crate alloc;
 
+use crate::ser::nibble_serializer::NibbleSerializer;
 use crate::ser::serializer::Serializer;
 
 pub mod flavors;
 pub(crate) mod serializer;
+
+pub mod nibble_flavors;
+pub(crate) mod nibble_serializer;
 
 /// Serialize a `T` to the given slice, with the resulting slice containing
 /// data in a serialized then COBS encoded format. The terminating sentinel
@@ -156,6 +163,15 @@ where
     T: Serialize + ?Sized,
 {
     serialize_with_flavor::<T, HVec<B>, Vec<u8, B>>(value, HVec::default())
+}
+
+#[cfg(feature = "heapless")]
+#[cfg_attr(doc_cfg, doc(cfg(feature = "heapless")))]
+pub fn to_nibble_vec<T, const B: usize>(value: &T) -> Result<Vec<u8, B>>
+where
+    T: Serialize + ?Sized,
+{
+    serialize_with_nibble_flavor::<T, NibbleHVec<B>, Vec<u8, B>>(value, NibbleHVec::default())
 }
 
 /// Serialize a `T` to a `std::vec::Vec<u8>`.
@@ -421,6 +437,19 @@ where
     S: Flavor<Output = O>,
 {
     let mut serializer = Serializer { output: storage };
+    value.serialize(&mut serializer)?;
+    serializer
+        .output
+        .finalize()
+        .map_err(|_| Error::SerializeBufferFull)
+}
+
+pub fn serialize_with_nibble_flavor<T, S, O>(value: &T, storage: S) -> Result<O>
+where
+    T: Serialize + ?Sized,
+    S: NibbleFlavor<Output = O>,
+{
+    let mut serializer = NibbleSerializer { output: storage };
     value.serialize(&mut serializer)?;
     serializer
         .output

@@ -86,6 +86,8 @@ pub use ser::flavors as ser_flavors;
 pub use ser::{serialize_with_flavor, serializer::Serializer, to_slice, to_slice_cobs};
 
 #[cfg(feature = "heapless")]
+pub use ser::to_nibble_vec;
+#[cfg(feature = "heapless")]
 pub use ser::{to_vec, to_vec_cobs};
 
 #[cfg(feature = "use-std")]

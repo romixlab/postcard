@@ -8,7 +8,7 @@ use heapless::{FnvIndexMap, String, Vec};
 #[cfg(feature = "heapless")]
 use postcard::to_nibble_vec;
 
-use postcard::from_bytes;
+use postcard::from_nibbles;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 
@@ -168,7 +168,7 @@ where
     assert_eq!(x, ser_rep);
     {
         // let deserialized: T = from_bytes(serialized.deref()).unwrap();
-        let deserialized: T = from_bytes(&x).unwrap();
+        let deserialized: T = from_nibbles(&x).unwrap();
         assert_eq!(data, deserialized);
     }
 }

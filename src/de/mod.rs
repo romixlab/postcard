@@ -3,9 +3,13 @@ use serde::Deserialize;
 
 pub(crate) mod deserializer;
 pub mod flavors;
+pub(crate) mod nibble_deserializer;
+pub mod nibble_flavors;
 
 use crate::error::{Error, Result};
 use deserializer::Deserializer;
+
+use self::nibble_deserializer::NibbleDeserializer;
 
 /// Deserialize a message of type `T` from a byte slice. The unused portion (if any)
 /// of the byte slice is not returned.
@@ -14,6 +18,15 @@ where
     T: Deserialize<'a>,
 {
     let mut deserializer = Deserializer::from_bytes(s);
+    let t = T::deserialize(&mut deserializer)?;
+    Ok(t)
+}
+
+pub fn from_nibbles<'a, T>(s: &'a [u8]) -> Result<T>
+where
+    T: Deserialize<'a>,
+{
+    let mut deserializer = NibbleDeserializer::from_bytes(s);
     let t = T::deserialize(&mut deserializer)?;
     Ok(t)
 }

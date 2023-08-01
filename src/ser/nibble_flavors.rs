@@ -139,19 +139,13 @@ impl<'a> NibbleFlavor for NibbleSlice<'a> {
 
     #[inline(always)]
     fn try_extend(&mut self, bytes: &[u8]) -> Result<()> {
+        self.align()?;
         if self.nibbles_left() < bytes.len() * 2 {
             Err(Error::SerializeBufferFull)
         } else {
-            if self.is_at_byte_boundary {
-                unsafe {
-                    core::ptr::copy_nonoverlapping(bytes.as_ptr(), self.cursor, bytes.len());
-                    self.cursor = self.cursor.add(bytes.len());
-                }
-            } else {
-                for byte in bytes {
-                    self.try_push_nib(*byte >> 4)?;
-                    self.try_push_nib(*byte & 0b0000_1111)?;
-                }
+            unsafe {
+                core::ptr::copy_nonoverlapping(bytes.as_ptr(), self.cursor, bytes.len());
+                self.cursor = self.cursor.add(bytes.len());
             }
             Ok(())
         }
@@ -197,6 +191,13 @@ mod heapless_vec {
         pub fn new() -> Self {
             Self::default()
         }
+
+        fn align(&mut self) -> Result<()> {
+            if !self.is_at_byte_boundary {
+                self.try_push_nib(0)?;
+            }
+            Ok(())
+        }
     }
 
     impl<const B: usize> NibbleFlavor for NibbleHVec<B> {
@@ -204,17 +205,10 @@ mod heapless_vec {
 
         #[inline(always)]
         fn try_extend(&mut self, bytes: &[u8]) -> Result<()> {
-            if self.is_at_byte_boundary {
-                self.vec
-                    .extend_from_slice(bytes)
-                    .map_err(|_| Error::SerializeBufferFull)
-            } else {
-                for byte in bytes {
-                    self.try_push_nib(*byte >> 4)?;
-                    self.try_push_nib(*byte & 0b0000_1111)?;
-                }
-                Ok(())
-            }
+            self.align()?;
+            self.vec
+                .extend_from_slice(bytes)
+                .map_err(|_| Error::SerializeBufferFull)
         }
 
         #[inline(always)]

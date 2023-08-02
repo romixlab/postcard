@@ -22,6 +22,8 @@ where
     Ok(t)
 }
 
+/// Deserialize a message of type `T` from a nibble byte slice. The unused portion (if any)
+/// of the byte slice is not returned.
 pub fn from_nibbles<'a, T>(s: &'a [u8]) -> Result<T>
 where
     T: Deserialize<'a>,

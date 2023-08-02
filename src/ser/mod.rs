@@ -1,6 +1,6 @@
 use crate::error::{Error, Result};
 use crate::ser::flavors::{Cobs, Flavor, Slice};
-use crate::ser::nibble_flavors::{NibbleFlavor, NibbleSlice};
+use crate::ser::nibble_flavors::NibbleFlavor;
 use serde::Serialize;
 
 #[cfg(feature = "heapless")]
@@ -165,6 +165,8 @@ where
     serialize_with_flavor::<T, HVec<B>, Vec<u8, B>>(value, HVec::default())
 }
 
+/// Serialize a `T` to a `heapless::Vec<u8>`, with the `Vec` containing
+/// data in a nibble serialized format.
 #[cfg(feature = "heapless")]
 #[cfg_attr(doc_cfg, doc(cfg(feature = "heapless")))]
 pub fn to_nibble_vec<T, const B: usize>(value: &T) -> Result<Vec<u8, B>>

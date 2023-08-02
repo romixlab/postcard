@@ -2,8 +2,6 @@
 //!
 use crate::error::{Error, Result};
 use core::marker::PhantomData;
-use core::ops::Index;
-use core::ops::IndexMut;
 
 #[cfg(feature = "heapless")]
 pub use heapless_vec::*;
@@ -61,17 +59,17 @@ pub struct NibbleSlice<'a> {
 }
 
 impl<'a> NibbleSlice<'a> {
-    /// Create a new `Slice` flavor from a given backing buffer
-    pub fn new(buf: &'a mut [u8]) -> Self {
-        let ptr = buf.as_mut_ptr();
-        NibbleSlice {
-            start: ptr,
-            cursor: ptr,
-            is_at_byte_boundary: true,
-            end: unsafe { ptr.add(buf.len()) },
-            _pl: PhantomData,
-        }
-    }
+    // Create a new `Slice` flavor from a given backing buffer
+    // pub fn new(buf: &'a mut [u8]) -> Self {
+    //     let ptr = buf.as_mut_ptr();
+    //     NibbleSlice {
+    //         start: ptr,
+    //         cursor: ptr,
+    //         is_at_byte_boundary: true,
+    //         end: unsafe { ptr.add(buf.len()) },
+    //         _pl: PhantomData,
+    //     }
+    // }
 
     fn align(&mut self) -> Result<()> {
         if !self.is_at_byte_boundary {
@@ -186,11 +184,11 @@ mod heapless_vec {
     }
 
     impl<const B: usize> NibbleHVec<B> {
-        /// Create a new, currently empty, [heapless::Vec] to be used for storing serialized
-        /// output data.
-        pub fn new() -> Self {
-            Self::default()
-        }
+        // Create a new, currently empty, [heapless::Vec] to be used for storing serialized
+        // output data.
+        // pub fn new() -> Self {
+        //     Self::default()
+        // }
 
         fn align(&mut self) -> Result<()> {
             if !self.is_at_byte_boundary {

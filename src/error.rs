@@ -29,12 +29,16 @@ pub enum Error {
     DeserializeBadEnum,
     /// The original data was not well encoded
     DeserializeBadEncoding,
+    /// vlu32n number contained more nibbles than maximum
+    DeserializeBadVlu32N,
     /// Serde Serialization Error
     SerdeSerCustom,
     /// Serde Deserialization Error
     SerdeDeCustom,
     /// Error while processing `collect_str` during serialization
     CollectStrError,
+    /// usize is treated as u32 and encoded as vlu32n
+    TooBigLen,
 }
 
 impl Display for Error {
@@ -60,9 +64,11 @@ impl Display for Error {
                 DeserializeBadOption => "Found an Option discriminant that wasn't 0 or 1",
                 DeserializeBadEnum => "Found an enum discriminant that was > u32::max_value()",
                 DeserializeBadEncoding => "The original data was not well encoded",
+                DeserializeBadVlu32N => "Tried to decode malformed vlu32n number",
                 SerdeSerCustom => "Serde Serialization Error",
                 SerdeDeCustom => "Serde Deserialization Error",
                 CollectStrError => "Error while processing `collect_str` during serialization",
+                TooBigLen => "Too big len, usize is treated as u32",
             }
         )
     }

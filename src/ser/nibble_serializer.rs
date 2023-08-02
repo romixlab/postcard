@@ -3,6 +3,7 @@ use serde::{ser, Serialize};
 use crate::error::{Error, Result};
 use crate::ser::nibble_flavors::NibbleFlavor;
 use crate::varint::*;
+use crate::vlu32n::Vlu32N;
 
 /// A `serde` compatible serializer, generic over "Flavors" of serializing plugins.
 ///
@@ -25,9 +26,12 @@ impl<F: NibbleFlavor> NibbleSerializer<F> {
     /// Attempt to push a variably encoded [usize] into the output data stream
     #[inline]
     pub(crate) fn try_push_varint_usize(&mut self, data: usize) -> Result<()> {
-        let mut buf = [0u8; varint_max::<usize>()];
-        let used_buf = varint_usize(data, &mut buf);
-        self.output.try_extend(used_buf)
+        if data > u32::MAX as usize {
+            Err(Error::TooBigLen)
+        } else {
+            let data = Vlu32N(data as u32);
+            data.ser(&mut self.output)
+        }
     }
 
     /// Attempt to push a variably encoded [u128] into the output data stream
@@ -35,7 +39,12 @@ impl<F: NibbleFlavor> NibbleSerializer<F> {
     pub(crate) fn try_push_varint_u128(&mut self, data: u128) -> Result<()> {
         let mut buf = [0u8; varint_max::<u128>()];
         let used_buf = varint_u128(data, &mut buf);
-        self.output.try_extend(used_buf)
+        // must match deserializer, which takes byte by byte or expose alignment into NibbleFlavor
+        // self.output.try_extend(used_buf)
+        for b in used_buf {
+            self.output.try_push_u8(*b)?;
+        }
+        Ok(())
     }
 
     /// Attempt to push a variably encoded [u64] into the output data stream
@@ -43,7 +52,11 @@ impl<F: NibbleFlavor> NibbleSerializer<F> {
     pub(crate) fn try_push_varint_u64(&mut self, data: u64) -> Result<()> {
         let mut buf = [0u8; varint_max::<u64>()];
         let used_buf = varint_u64(data, &mut buf);
-        self.output.try_extend(used_buf)
+        // self.output.try_extend(used_buf)
+        for b in used_buf {
+            self.output.try_push_u8(*b)?;
+        }
+        Ok(())
     }
 
     /// Attempt to push a variably encoded [u32] into the output data stream
@@ -51,7 +64,11 @@ impl<F: NibbleFlavor> NibbleSerializer<F> {
     pub(crate) fn try_push_varint_u32(&mut self, data: u32) -> Result<()> {
         let mut buf = [0u8; varint_max::<u32>()];
         let used_buf = varint_u32(data, &mut buf);
-        self.output.try_extend(used_buf)
+        // self.output.try_extend(used_buf)
+        for b in used_buf {
+            self.output.try_push_u8(*b)?;
+        }
+        Ok(())
     }
 
     /// Attempt to push a variably encoded [u16] into the output data stream
@@ -59,7 +76,11 @@ impl<F: NibbleFlavor> NibbleSerializer<F> {
     pub(crate) fn try_push_varint_u16(&mut self, data: u16) -> Result<()> {
         let mut buf = [0u8; varint_max::<u16>()];
         let used_buf = varint_u16(data, &mut buf);
-        self.output.try_extend(used_buf)
+        // self.output.try_extend(used_buf)
+        for b in used_buf {
+            self.output.try_push_u8(*b)?;
+        }
+        Ok(())
     }
 }
 
@@ -128,15 +149,14 @@ where
 
     #[inline]
     fn serialize_u8(self, v: u8) -> Result<()> {
-        self.output
-            .try_push_u8(v)
-            .map_err(|_| Error::SerializeBufferFull)
+        let v = Vlu32N(v as u32);
+        v.ser(&mut self.output)
     }
 
     #[inline]
     fn serialize_u16(self, v: u16) -> Result<()> {
-        self.try_push_varint_u16(v)
-            .map_err(|_| Error::SerializeBufferFull)
+        let v = Vlu32N(v as u32);
+        v.ser(&mut self.output)
     }
 
     #[inline]
@@ -230,8 +250,8 @@ where
         variant_index: u32,
         _variant: &'static str,
     ) -> Result<()> {
-        self.try_push_varint_u32(variant_index)
-            .map_err(|_| Error::SerializeBufferFull)
+        let v = Vlu32N(variant_index);
+        v.ser(&mut self.output)
     }
 
     #[inline]
@@ -253,8 +273,8 @@ where
     where
         T: ?Sized + Serialize,
     {
-        self.try_push_varint_u32(variant_index)
-            .map_err(|_| Error::SerializeBufferFull)?;
+        let v = Vlu32N(variant_index);
+        v.ser(&mut self.output)?;
         value.serialize(self)
     }
 
@@ -287,8 +307,8 @@ where
         _variant: &'static str,
         _len: usize,
     ) -> Result<Self::SerializeTupleVariant> {
-        self.try_push_varint_u32(variant_index)
-            .map_err(|_| Error::SerializeBufferFull)?;
+        let v = Vlu32N(variant_index);
+        v.ser(&mut self.output)?;
         Ok(self)
     }
 
@@ -312,8 +332,8 @@ where
         _variant: &'static str,
         _len: usize,
     ) -> Result<Self::SerializeStructVariant> {
-        self.try_push_varint_u32(variant_index)
-            .map_err(|_| Error::SerializeBufferFull)?;
+        let v = Vlu32N(variant_index);
+        v.ser(&mut self.output)?;
         Ok(self)
     }
 

@@ -13,6 +13,7 @@ mod varint;
 // Still experimental! Don't make pub pub.
 pub(crate) mod max_size;
 pub(crate) mod schema;
+pub(crate) mod vlu32n;
 
 /// # Experimental Postcard Features
 ///

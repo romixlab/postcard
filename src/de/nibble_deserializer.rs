@@ -3,6 +3,7 @@ use serde::de::{self, DeserializeSeed, IntoDeserializer, Visitor};
 use crate::de::nibble_flavors::{NibbleFlavor, NibbleSlice};
 use crate::error::{Error, Result};
 use crate::varint::{max_of_last_byte, varint_max};
+use crate::vlu32n::Vlu32N;
 use core::marker::PhantomData;
 
 /// A `serde` compatible deserializer, generic over “Flavors” of deserializing plugins.
@@ -47,25 +48,30 @@ impl<'de, F: NibbleFlavor<'de>> NibbleDeserializer<'de, F> {
     #[cfg(target_pointer_width = "8")]
     #[inline(always)]
     fn try_take_varint_usize(&mut self) -> Result<usize> {
-        self.try_take_varint_u8().map(|u| u as usize)
+        let u = Vlu32N::de(&mut self.flavor)?.0;
+        Ok(u as usize)
     }
 
     #[cfg(target_pointer_width = "16")]
     #[inline(always)]
     fn try_take_varint_usize(&mut self) -> Result<usize> {
-        self.try_take_varint_u16().map(|u| u as usize)
+        let u = Vlu32N::de(&mut self.flavor)?.0;
+        Ok(u as usize)
     }
 
     #[cfg(target_pointer_width = "32")]
     #[inline(always)]
     fn try_take_varint_usize(&mut self) -> Result<usize> {
-        self.try_take_varint_u32().map(|u| u as usize)
+        let u = Vlu32N::de(&mut self.flavor)?.0;
+        Ok(u as usize)
     }
 
     #[cfg(target_pointer_width = "64")]
     #[inline(always)]
     fn try_take_varint_usize(&mut self) -> Result<usize> {
-        self.try_take_varint_u64().map(|u| u as usize)
+        let u = Vlu32N::de(&mut self.flavor)?.0;
+        Ok(u as usize)
+        // self.try_take_varint_u64().map(|u| u as usize)
     }
 
     #[inline]
@@ -285,7 +291,12 @@ impl<'de, 'a, F: NibbleFlavor<'de>> de::Deserializer<'de> for &'a mut NibbleDese
     where
         V: Visitor<'de>,
     {
-        visitor.visit_u8(self.flavor.try_take_u8()?)
+        let v = Vlu32N::de(&mut self.flavor)?.0;
+        if v <= 255 {
+            visitor.visit_u8(v as u8)
+        } else {
+            Err(Error::DeserializeBadVlu32N)
+        }
     }
 
     #[inline]
@@ -293,8 +304,12 @@ impl<'de, 'a, F: NibbleFlavor<'de>> de::Deserializer<'de> for &'a mut NibbleDese
     where
         V: Visitor<'de>,
     {
-        let v = self.try_take_varint_u16()?;
-        visitor.visit_u16(v)
+        let v = Vlu32N::de(&mut self.flavor)?.0;
+        if v <= 65_535 {
+            visitor.visit_u16(v as u16)
+        } else {
+            Err(Error::DeserializeBadVlu32N)
+        }
     }
 
     #[inline]
@@ -580,8 +595,8 @@ impl<'de, 'a, F: NibbleFlavor<'de>> serde::de::EnumAccess<'de>
 
     #[inline]
     fn variant_seed<V: DeserializeSeed<'de>>(self, seed: V) -> Result<(V::Value, Self)> {
-        let varint = self.try_take_varint_u32()?;
-        let v = DeserializeSeed::deserialize(seed, varint.into_deserializer())?;
+        let v = Vlu32N::de(&mut self.flavor)?.0;
+        let v = DeserializeSeed::deserialize(seed, v.into_deserializer())?;
         Ok((v, self))
     }
 }
